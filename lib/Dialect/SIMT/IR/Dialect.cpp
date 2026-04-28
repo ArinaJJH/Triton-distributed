@@ -43,7 +43,9 @@ void mlir::triton::simt::SIMTDialect::initialize() {
 #define GET_OP_LIST
 #include "TritonDistributed/Dialect/SIMT/IR/Ops.cpp.inc"
       >();
+#ifndef USE_MACA
   addInterfaces<TritonInlinerInterface>();
+#endif
 }
 
 #include "TritonDistributed/Dialect/SIMT/IR/SIMTEnums.cpp.inc"

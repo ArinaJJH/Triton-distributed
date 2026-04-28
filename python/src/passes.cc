@@ -34,6 +34,7 @@
 
 namespace py = pybind11;
 
+#ifndef USE_MACA
 void init_triton_distributed_passes_ttgpuir_for_nvidia(py::module &&m) {
   using namespace mlir::triton;
   ADD_PASS_WRAPPER_2("add_convert_triton_distributed_to_llvm",
@@ -48,6 +49,7 @@ void init_triton_distributed_passes_ttgpuir_for_amd(py::module &&m) {
                      createConvertAMDDistributedToLLVMPass, const std::string &,
                      bool);
 }
+#endif
 
 #ifdef USE_MACA
 void init_triton_distributed_passes_ttgpuir_for_metax(py::module &&m) {

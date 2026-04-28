@@ -32,9 +32,24 @@ import re
 import warnings
 
 import triton
-from triton.runtime.errors import PTXASError
+try:
+    from triton.runtime.errors import PTXASError
+except ImportError:
+    PTXASError = Exception
 from triton.runtime.jit import JITFunction, KernelInterface
-from triton import knobs
+try:
+    from triton import knobs
+except ImportError:
+    # Create a mock knobs object for triton 3.0 compatibility
+    class MockKnobs:
+        class compilation:
+            disable_line_info = False
+        class nvidia:
+            disable_ptxas_opt = False
+        class runtime:
+            jit_post_compile_hook = None
+            add_stages_inspection_hook = None
+    knobs = MockKnobs()
 from triton_dist.utils import is_cuda, is_hip, is_maca, HIP_CHECK
 
 T = TypeVar("T")

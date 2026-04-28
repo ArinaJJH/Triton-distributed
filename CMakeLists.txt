@@ -93,7 +93,8 @@ else()
 endif()
 
 if(TRITON_USE_MACA)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_MACA")
+  set(USE_MACA ON)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_MACA -DUSE_MACA_OPAQUE_PTR -DUSE_LLVM19_INTRINSIC -DUSE_BUILTIN -Wno-attributes -Wno-undefined-inline -Wno-inline-new-delete")
 endif()
 
 # #########
@@ -148,7 +149,11 @@ endfunction()
 
 # Disable warnings that show up in external code (gtest;pybind11)
 if(NOT MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wno-covered-switch-default -fvisibility=hidden")
+  if(NOT TRITON_USE_MACA)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wno-covered-switch-default -fvisibility=hidden")
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-covered-switch-default -fvisibility=hidden")
+  endif()
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4624 /wd4715 /wd4530")
 endif()
@@ -358,10 +363,12 @@ if(TRITON_BUILD_PYTHON_MODULE)
       message(FATAL_ERROR "TRITON_WHEEL_DIR must be set.")
   endif()
 
-  configure_file(
-    "${LLVM_SYSPATH}/bin/FileCheck"
-    "${TRITON_WHEEL_DIR}/FileCheck"
-    COPYONLY)
+  if(EXISTS "${LLVM_SYSPATH}/bin/FileCheck")
+    configure_file(
+      "${LLVM_SYSPATH}/bin/FileCheck"
+      "${TRITON_WHEEL_DIR}/FileCheck"
+      COPYONLY)
+  endif()
 
 endif()
 

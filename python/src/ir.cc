@@ -10,7 +10,9 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#ifndef USE_MACA
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
+#endif
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -37,8 +39,10 @@
 #include "llvm/Support/SourceMgr.h"
 
 #include "TritonDistributed/Dialect/Distributed/IR/Dialect.h"
+#ifndef USE_MACA
 #include "TritonDistributed/Dialect/SIMT/IR/Dialect.h"
 #include "third_party/proton/dialect/include/Dialect/Proton/IR/Dialect.h"
+#endif
 
 namespace {
 
@@ -139,18 +143,26 @@ void init_triton_distributed_ir(py::module &&m) {
         .insert<TritonDialect, ::mlir::triton::gpu::TritonGPUDialect,
                 math::MathDialect, arith::ArithDialect, scf::SCFDialect,
                 tensor::TensorDialect, ::mlir::gpu::GPUDialect,
-                cf::ControlFlowDialect, ::mlir::triton::proton::ProtonDialect,
+                cf::ControlFlowDialect,
+#ifndef USE_MACA
+                ::mlir::triton::proton::ProtonDialect,
+#endif
                 ::mlir::triton::distributed::DistributedDialect,
-                ::mlir::triton::simt::SIMTDialect, LLVM::LLVMDialect,
+#ifndef USE_MACA
+                ::mlir::triton::simt::SIMTDialect,
+#endif
+                LLVM::LLVMDialect,
                 mlir::ub::UBDialect>();
-    mlir::LLVM::registerInlinerInterface(registry);
     registerBuiltinDialectTranslation(registry);
     registerLLVMDialectTranslation(registry);
+#ifndef USE_MACA
     mlir::LLVM::registerInlinerInterface(registry);
+#endif
     context.appendDialectRegistry(registry);
     context.loadAllAvailableDialects();
   });
 
+#ifndef USE_MACA
   // simt ops
   py::class_<triton::simt::BlockYieldOp, OpState>(m, "BlockYieldOp",
                                                   py::module_local());
@@ -162,32 +174,36 @@ void init_triton_distributed_ir(py::module &&m) {
             return &self.getDefaultRegion().front();
           },
           ret::reference);
+#endif
 
   // DistributedOpBuilder inherit the original triton builder and add the
   // support of TritonDitributed. In this way, we can directly use this new
   // builder without maintaining two builders on the Python side. Because the
   // `InsertionPoint` needs to be consistent between builders.
-  py::class_<DistributedOpBuilder, TritonOpBuilder>(
-      m, "DistributedOpBuilder", py::module_local(), py::dynamic_attr())
-      .def(py::init<MLIRContext *>())
-      // SIMT ops
-      .def("create_get_thread_id",
-           [](TritonOpBuilder &self) -> Value {
-             // triton only use 1D thread block
-             Value tid = self.create<::mlir::gpu::ThreadIdOp>(
-                 ::mlir::gpu::Dimension::x);
-             Type ty_i32 = self.getBuilder().getIntegerType(32);
-             tid = self.create<arith::IndexCastOp>(ty_i32, tid);
-             return tid;
-           })
-      .def("create_get_block_size",
-           [](TritonOpBuilder &self) -> Value {
-             Value bs = self.create<::mlir::gpu::BlockDimOp>(
-                 ::mlir::gpu::Dimension::x);
-             Type ty_i32 = self.getBuilder().getIntegerType(32);
-             bs = self.create<arith::IndexCastOp>(ty_i32, bs);
-             return bs;
-           })
+  auto distributed_op_builder =
+      py::class_<DistributedOpBuilder, TritonOpBuilder>(
+          m, "DistributedOpBuilder", py::module_local(), py::dynamic_attr())
+          .def(py::init<MLIRContext *>())
+          // SIMT ops
+          .def("create_get_thread_id",
+               [](TritonOpBuilder &self) -> Value {
+                 // triton only use 1D thread block
+                 Value tid = self.create<::mlir::gpu::ThreadIdOp>(
+                     ::mlir::gpu::Dimension::x);
+                 Type ty_i32 = self.getBuilder().getIntegerType(32);
+                 tid = self.create<arith::IndexCastOp>(ty_i32, tid);
+                 return tid;
+               })
+          .def("create_get_block_size",
+               [](TritonOpBuilder &self) -> Value {
+                 Value bs = self.create<::mlir::gpu::BlockDimOp>(
+                     ::mlir::gpu::Dimension::x);
+                 Type ty_i32 = self.getBuilder().getIntegerType(32);
+                 bs = self.create<arith::IndexCastOp>(ty_i32, bs);
+                 return bs;
+               });
+#ifndef USE_MACA
+  distributed_op_builder
       .def("create_simt_exec_region_op",
            [](TritonOpBuilder &self,
               std::vector<Value> &init_args) -> triton::simt::SIMTExecRegionOp {
@@ -198,7 +214,9 @@ void init_triton_distributed_ir(py::module &&m) {
            [](TritonOpBuilder &self,
               std::vector<Value> &yields) -> triton::simt::BlockYieldOp {
              return self.create<triton::simt::BlockYieldOp>(yields);
-           })
+           });
+#endif
+  distributed_op_builder
       .def("create_extract",
            [](TritonOpBuilder &self, Value src,
               std::vector<Value> &indices) -> Value {
@@ -234,7 +252,7 @@ void init_triton_distributed_ir(py::module &&m) {
       .def("create_laneid",
            [](TritonOpBuilder &self) -> Value {
              Value laneId =
-                 self.create<mlir::gpu::LaneIdOp>(/*upperBound=*/nullptr);
+                 self.create<mlir::gpu::LaneIdOp>();
              return self.create<arith::IndexCastOp>(
                  self.getBuilder().getI32Type(), laneId);
            })

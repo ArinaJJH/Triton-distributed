@@ -141,7 +141,10 @@ elif is_hip():
                               "Please install mori_shmem or use rocshmem backend: "
                               "export TRITON_DIST_SHMEM_BACKEND=rocshmem")
 elif is_maca():
-    from maca import macart
+    try:
+        from maca import macart
+    except ImportError:
+        macart = None
 else:
     raise Exception("either CUDA or HIP platform is supported")
 

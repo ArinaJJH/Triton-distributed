@@ -44,7 +44,9 @@ void mlir::triton::distributed::DistributedDialect::initialize() {
 #include "TritonDistributed/Dialect/Distributed/IR/Ops.cpp.inc"
       >();
 
+#ifndef USE_MACA
   addInterfaces<TritonInlinerInterface>();
+#endif
 }
 
 #include "TritonDistributed/Dialect/Distributed/IR/DistributedEnums.cpp.inc"

@@ -720,9 +720,11 @@ class CMakeBuild(build_ext):
 
 
 nvidia_version_path = os.path.join(get_base_dir(), "3rdparty", "triton", "cmake", "nvidia-toolchain-version.json")
+print("start read json")
 with open(nvidia_version_path, "r") as nvidia_version_file:
     # parse this json file to get the version of the nvidia toolchain
     NVIDIA_TOOLCHAIN_VERSION = json.load(nvidia_version_file)
+print("end read json")
 
 exe_extension = sysconfig.get_config_var("EXE")
 download_and_copy(
@@ -799,7 +801,12 @@ download_and_copy(
     url_func=lambda system, arch, version:
     f"https://developer.download.nvidia.com/compute/cuda/redist/cuda_cupti/{system}-{arch}/cuda_cupti-{system}-{arch}-{version}-archive.tar.xz",
 )
-backends = [*BackendInstaller.copy(["nvidia", "amd"]), *BackendInstaller.copy_externals()]
+# Determine which backends to include
+if _is_maca_platform() and check_env_flag("TRITON_USE_MACA", "OFF"):
+    _backend_list = ["metax"]
+else:
+    _backend_list = ["nvidia", "amd"]
+backends = [*BackendInstaller.copy(_backend_list), *BackendInstaller.copy_externals()]
 
 
 def add_link_to_backends(external_only, materialization=False):
@@ -925,7 +932,7 @@ package_data = {
         f"triton/backends/{b.name}": [f"{os.path.relpath(p, b.backend_dir)}/*" for p, _, _, in os.walk(b.backend_dir)]
         for b in backends
     }, "triton/language/extra": sum(
-        ([f"{os.path.relpath(p, b.language_dir)}/*" for p, _, _, in os.walk(b.language_dir)] for b in backends), []),
+        ([f"{os.path.relpath(p, b.language_dir)}/*" for p, _, _, in os.walk(b.language_dir)] for b in backends if b.language_dir is not None), []),
     '': ['*.so*', '*.a']
 }
 

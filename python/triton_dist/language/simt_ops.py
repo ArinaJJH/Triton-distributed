@@ -25,14 +25,14 @@
 from typing import Sequence
 import triton
 from triton.language import core as tl
-from triton.language.core import builtin, base_type, constexpr, dtype, get_int_dtype
+from triton.language.core import builtin, constexpr, dtype, get_int_dtype
 from triton._C.libtriton import ir
 import builtins
 from triton.language import core as tlc
 from typing import List, Optional
 
 
-class vector_type(base_type):
+class vector_type(dtype):
 
     def __init__(self, type, vec_size):
         self.vec_size = vec_size

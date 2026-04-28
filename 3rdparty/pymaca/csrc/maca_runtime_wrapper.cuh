@@ -1,8 +1,9 @@
-#include "maca.h"
-#include "mc_runtime.h"
+#include <cstddef>
 #include <cstdint>
 #include <tuple>
 #include <vector>
+#include "maca.h"
+#include "mc_runtime.h"
 
 std::tuple<mcError_t> mcMemcpyAsyncWrapper(int64_t dst, const int64_t src,
                                            size_t count, mcMemcpyKind kind,
